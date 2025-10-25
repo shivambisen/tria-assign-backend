@@ -6,8 +6,8 @@ const router = Router();
 
 router.get('/contact',getContact);
 router.post('/contact',createContact);
-router.put('/contact',updateContact);
-router.delete('/contact',deleteContact);
+router.put("/contact",updateContact);
+router.delete("/contact",deleteContact);
 router.get("/contact/search", searchContact)
 
 export default router;

@@ -54,7 +54,6 @@ export const getContact = async (req, res) => {
     } catch (err) {
       console.error("Error creating contact:", err);
   
-      // Handle Prisma-specific unique constraint errors
       if (err instanceof prisma.PrismaClientKnownRequestError) {
         if (err.code === "P2002") {
           const field = err.meta?.target?.join(", ") || "unique field";
@@ -68,7 +67,8 @@ export const getContact = async (req, res) => {
   
   export const updateContact = async (req, res) => {
     try {
-      const { id } = req.params;
+      const { id } = req.query;
+      console.log(id)
       const { name, email, number, location } = req.body;
   
       if (!name || !email || !number || !location) {
@@ -112,8 +112,8 @@ export const getContact = async (req, res) => {
   
 export const deleteContact = async (req, res) => {
     try {
-        const { id } = req.params;
-
+        const { id } = req.query;
+        console.log(id)
         await prisma.contact.delete({
             where: { id: parseInt(id) },
         });
