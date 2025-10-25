@@ -25,46 +25,91 @@ export const getContact = async (req, res) => {
     }
   }
 
-export const createContact = async (req, res) => {
+  export const createContact = async (req, res) => {
     try {
-        const { name, email, number,location } = req.body;
-        console.log(name,email,number,location)
-
-        if (!name || !email || !number || !location) {
-            return res.status(400).json({ error: "Name, email, and number are required." });
-        }
-
-        const newContact = await prisma.contact.create({
-            data: { name, email, number,location },
-        });
-
-        res.status(201).json(newContact);
+      const { name, email, number, location } = req.body;
+  
+      if (!name || !email || !number || !location) {
+        return res.status(400).json({ error: "All fields (name, email, number, location) are required." });
+      }
+  
+      // Check if email or phone number already exists
+      const existing = await prisma.contact.findFirst({
+        where: {
+          OR: [{ email }, { number }],
+        },
+      });
+  
+      if (existing) {
+        let conflictField = existing.email === email ? "email" : "phone number";
+        return res.status(409).json({ error: `A contact with this ${conflictField} already exists.` });
+      }
+  
+      const newContact = await prisma.contact.create({
+        data: { name, email, number, location },
+      });
+  
+      return res.status(201).json(newContact);
+  
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create contact." });
+      console.error("Error creating contact:", err);
+  
+      // Handle Prisma-specific unique constraint errors
+      if (err instanceof prisma.PrismaClientKnownRequestError) {
+        if (err.code === "P2002") {
+          const field = err.meta?.target?.join(", ") || "unique field";
+          return res.status(409).json({ error: `A contact with this ${field} already exists.` });
+        }
+      }
+  
+      return res.status(500).json({ error: "Failed to create contact. Please try again later." });
     }
-};
-
-export const updateContact = async (req, res) => {
+  };
+  
+  export const updateContact = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { name, email, number,location } = req.body;
-        console.log(name,email,number,location)
-        if (!name || !email || !number || !location) {
-            return res.status(400).json({ error: "Name, email, and number are required." });
-        }
-        const updatedContact = await prisma.contact.update({
-            where: { id: parseInt(id) },
-            data: { name, email, number,location },
-        });
-
-        res.status(200).json(updatedContact);
+      const { id } = req.params;
+      const { name, email, number, location } = req.body;
+  
+      if (!name || !email || !number || !location) {
+        return res.status(400).json({ error: "All fields (name, email, number, location) are required." });
+      }
+  
+      const existing = await prisma.contact.findFirst({
+        where: {
+          OR: [{ email }, { number }],
+          NOT: { id: parseInt(id) },
+        },
+      });
+  
+      if (existing) {
+        let conflictField = existing.email === email ? "email" : "phone number";
+        return res.status(409).json({ error: `Another contact with this ${conflictField} already exists.` });
+      }
+  
+      const updatedContact = await prisma.contact.update({
+        where: { id: parseInt(id) },
+        data: { name, email, number, location },
+      });
+  
+      return res.status(200).json(updatedContact);
+  
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to update contact." });
+      console.error("Error updating contact:", err);
+  
+      if (err instanceof prisma.PrismaClientKnownRequestError) {
+        if (err.code === "P2025") {
+          return res.status(404).json({ error: "Contact not found." });
+        } else if (err.code === "P2002") {
+          const field = err.meta?.target?.join(", ") || "unique field";
+          return res.status(409).json({ error: `A contact with this ${field} already exists.` });
+        }
+      }
+  
+      return res.status(500).json({ error: "Failed to update contact. Please try again later." });
     }
-};
-
+  };
+  
 export const deleteContact = async (req, res) => {
     try {
         const { id } = req.params;
