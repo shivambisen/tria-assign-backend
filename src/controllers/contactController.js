@@ -2,13 +2,28 @@ import prisma from "../config/prisma.js";
 
 export const getContact = async (req, res) => {
     try {
-        const contacts = await prisma.contact.findMany();
-        res.status(200).json(contacts);
-    } catch (err) {
-        console.error(err);
-        res.status(400).json({ error: "Failed to fetch contacts." });
+      const page = parseInt(req.query.page ) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+  
+      const contacts = await prisma.contact.findMany({
+        skip,
+        take: limit,
+      });
+  
+      const total = await prisma.contact.count();
+  
+      res.json({
+        data: contacts,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error fetching contacts" });
     }
-};
+  }
 
 export const createContact = async (req, res) => {
     try {
